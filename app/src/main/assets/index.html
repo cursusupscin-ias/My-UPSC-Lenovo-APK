@@ -118,6 +118,7 @@ button,input,select,textarea{font-family:inherit;color:inherit}
 .grid3 .kpi:nth-child(5) b{color:#DB2777}
 .grid3 .kpi:nth-child(6) b{color:#0891B2}
 body.locked .shell,body.locked .tabbar{visibility:hidden}.overlay.gate{background:#fff}
+.choosing .loc-only{display:none!important}.modal:not(.choosing) .choice-only{display:none!important}
 [role=button]:focus-visible,.btn:focus-visible,.ni:focus-visible,.tb:focus-visible,.step:focus-visible,.src:focus-visible,.tiny:focus-visible,.cb:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 .frm.c3{grid-template-columns:1fr 1fr auto}@media(max-width:860px){.frm.c3{grid-template-columns:1fr}}
 .bk{position:fixed;right:20px;bottom:20px;max-width:380px;z-index:120;background:#0A0A0A;color:#fff;padding:14px 16px;border-radius:12px;display:none;flex-direction:column;gap:10px;font-size:13px;box-shadow:0 12px 32px rgba(0,0,0,.3)}.bk .btn{background:#fff;color:#0A0A0A}
@@ -159,14 +160,31 @@ body.dark .bk{background:#1F2430}body.dark #f-tc{filter:invert(1) hue-rotate(180
 </style>
 
 
-</head><body class="locked">
+<script src="https://www.gstatic.com/firebasejs/11.10.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/11.10.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore-compat.js"></script>
+<script src="./firebase-config.js"></script>
+<script>window.UPSC_FIREBASE_CONFIG=window.UPSC_FIREBASE_CONFIG||{apiKey:"AIzaSyAgIH1WALhnYkvrlkosy5G2uCJ8_PTf4oQ",authDomain:"upsc-syllabus-tracker-1f63e.firebaseapp.com",projectId:"upsc-syllabus-tracker-1f63e",storageBucket:"upsc-syllabus-tracker-1f63e.firebasestorage.app",messagingSenderId:"297161807943",appId:"1:297161807943:web:a29a080e435e7f99c9f962",measurementId:"G-T0CRS2EMXC"};</script></head><body class="locked">
 <div id="toast"></div><input type="file" id="imp" style="display:none" accept=".json"><input type="file" id="pd-imp" style="display:none" accept=".json">
 <div class="overlay gate active" id="auth-modal">
-  <div class="modal" style="max-width:430px">
+  <div class="modal choosing" id="auth-box" style="max-width:430px">
     <img class="lg" alt="">
-    <h2 id="local-auth-title">Your UPSC CSE Tracker</h2>
-    <p class="hint" id="local-auth-sub">Sign in with your local username and password.</p>
-    <form id="local-auth-form" autocomplete="on" style="display:grid;gap:12px">
+    <div class="choice-only" style="display:grid;gap:12px">
+      <h2>Your UPSC CSE Tracker</h2>
+      <p class="hint" id="choice-restoring" style="display:none">Restoring your Google session…</p>
+      <div id="choice-btns" style="display:grid;gap:12px">
+        <p class="hint">Choose how you want to continue.</p>
+        <button class="btn pri" id="login-offline-btn" type="button" style="padding:13px">Continue offline</button>
+        <div class="hint" style="margin-top:-6px">Local username and password with a security question. Saved only in this browser and never synced.</div>
+        <button class="btn" id="google-login-btn" type="button" style="padding:13px">Continue with Google</button>
+        <div class="hint" style="margin-top:-6px">Signs in with Google and syncs your tracker to your own account through Firebase.</div>
+      </div>
+      <div class="err" id="google-login-error"></div>
+      <div class="fine"><b style="color:var(--ink)">Two separate accounts.</b><br>Offline accounts and Google accounts never share or sync data with each other. You stay signed in until you press Sign out.</div>
+    </div>
+    <h2 class="loc-only" id="local-auth-title">Your UPSC CSE Tracker</h2>
+    <p class="hint loc-only" id="local-auth-sub">Sign in with your local username and password.</p>
+    <form id="local-auth-form" class="loc-only" autocomplete="on" style="display:grid;gap:12px">
       <label class="hint" for="local-username">Username</label>
       <input class="inp" id="local-username" name="username" autocomplete="username" minlength="3" maxlength="24" pattern="[A-Za-z0-9._\-]+" required placeholder="e.g. kp_study">
       <div id="local-pw-wrap" style="display:grid;gap:12px"><label class="hint" for="local-password">Password</label>
@@ -178,9 +196,10 @@ body.dark .bk{background:#1F2430}body.dark #f-tc{filter:invert(1) hue-rotate(180
       <div class="err" id="local-auth-error" role="alert"></div>
       <button class="btn pri" id="local-auth-submit" type="submit" style="padding:13px">Sign in</button>
     </form>
-    <button class="btn" id="local-auth-toggle" type="button" style="padding:11px">Create a new local account</button>
-    <div style="text-align:center"><button class="link" id="local-auth-forgot" type="button" style="font-size:12.5px">Forgot password?</button></div>
-    <div class="fine"><b style="color:var(--ink)">Local-only account</b><br>Your records are saved in this browser/device under your username. They do not sync to other devices. This login is an access gate, not encryption; anyone with access to this browser profile or its storage may still access the data. Export backups regularly.</div>
+    <button class="btn loc-only" id="local-auth-toggle" type="button" style="padding:11px">Create a new local account</button>
+    <div class="loc-only" style="text-align:center"><button class="link" id="local-auth-forgot" type="button" style="font-size:12.5px">Forgot password?</button></div>
+    <div class="fine loc-only"><b style="color:var(--ink)">Offline account</b><br>Your records are saved in this browser/device under your username. They do not sync to other devices. This login is an access gate, not encryption; anyone with access to this browser profile or its storage may still access the data. Export backups regularly.</div>
+    <div class="loc-only" style="text-align:center"><button class="link" id="login-back" type="button" style="font-size:12.5px">← Back to login options</button></div>
   </div>
 </div><div class="overlay" id="imp-modal"><div class="modal" style="max-width:520px"><h2>Import backup</h2><div id="imp-sum"></div><p class="hint">Replace swaps everything in this account for the backup. Merge keeps what you have and adds anything missing from the backup. You can undo either from Planner Setup.</p><div class="row" style="justify-content:flex-end"><button class="btn" id="imp-cancel">Cancel</button><button class="btn" id="imp-merge">Merge</button><button class="btn pri" id="imp-replace">Replace</button></div></div></div>
 <div class="bk" id="bk-banner"><span id="bk-t">Test saved. Back up your tracker now so your results are safe.</span><span class="row"><button class="btn sm" id="bk-now">Back up now</button><button class="btn sm" id="bk-x">Later</button></span></div>
@@ -221,15 +240,19 @@ const longD=s=>parse(s).toLocaleDateString('en-US',{weekday:'long',month:'long',
 const ts=()=>{const n=new Date();return n.toLocaleDateString('en-US',{month:'short',day:'numeric'})+' · '+n.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'})};
 let tt;function toast(t){const e=$('toast');e.textContent=t;e.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>e.classList.remove('show'),2400)}
 let col=null,pushT=null,tcT=null,lastTests={},unsubs=[],cloudP=null;
+/* Cloud write gates: a document is only written after it has been successfully read for the signed-in account, so a failed or unfinished first read can never overwrite cloud data. */
+let okMain=null,okTc=null,okPd=null,retryT=null;
+function syncErr(e){console.error('FIRESTORE SYNC ERROR:',e&&e.code,e&&e.message);setSync('err');if(e&&e.code==='permission-denied'&&!syncErr.w){syncErr.w=1;toast('Cloud sync blocked: check the Firestore security rules')}}
+function retryPull(){if(retryT||!col||!acct)return;setSync('err');retryT=setTimeout(async()=>{retryT=null;if(col&&acct)await pullAccount(acct)},5000)}
 function setSync(s){const e=$('sync');e.className='sync'+(s==='ok'?' ok':'');e.lastChild.textContent={ok:'Synced to your account',sav:'Saved locally · syncing…',err:'Sync error, will retry on next change',big:'Data too large to sync',local:'Saved on this device only'}[s];e.title=s==='local'?'Independent local tracker; use JSON backup to transfer devices':''}
 const hasData=p=>Object.keys(p.t).length||Object.keys(p.m).length||Object.keys(p.log).length||Object.keys(p.tk).length||(p.tc&&p.tc.tests&&p.tc.tests.length);
 const mainJSON=()=>{const q=Object.assign({},P);delete q.tc;delete q.tcU;return JSON.stringify(q)};
 function push(){if(!col||!acct)return;setSync('sav');clearTimeout(pushT);pushT=setTimeout(pushMain,700)}
-async function pushMain(){if(!col||!acct)return;try{const j=mainJSON();if(j.length>240000){setSync('big');return}await col.doc('p_'+acct).set({p:j,u:P.u||0});console.log("TRACKER FIRESTORE SAVE SUCCESS");
-setSync('ok')}catch(e){setSync('err')}}
+async function pushMain(){if(!col||!acct)return;if(okMain!==acct)return retryPull();try{const j=mainJSON();if(j.length>240000){setSync('big');return}await col.doc('p_'+acct).set({p:j,u:P.u||0});console.log("TRACKER FIRESTORE SAVE SUCCESS");
+setSync('ok')}catch(e){syncErr(e)}}
 const pushTcSoon=()=>{if(!col||!acct)return;setSync('sav');clearTimeout(tcT);tcT=setTimeout(pushTc,1200)};
 const tdk=(u,id)=>'t_'+u+'_'+String(id).replace(/[^\w-]/g,'_');
-async function pushTc(){if(!col||!acct)return;try{const tc=P.tc||{tests:[]},u=acct,now=P.tcU||Date.now(),cur={};(tc.tests||[]).forEach(t=>cur[t.id]=JSON.stringify(t));const w=[];Object.keys(cur).forEach(id=>{if(lastTests[id]!==cur[id])w.push(col.doc(tdk(u,id)).set({j:cur[id]}))});Object.keys(lastTests).forEach(id=>{if(!(id in cur))w.push(col.doc(tdk(u,id)).delete())});await Promise.all(w);const meta=Object.assign({},tc);delete meta.tests;await col.doc('tcm_'+u).set({u:now,ids:JSON.stringify(Object.keys(cur)),meta:JSON.stringify(meta)});lastTests=cur;setSync('ok')}catch(e){setSync('err')}}
+async function pushTc(){if(!col||!acct)return;if(okTc!==acct)return retryPull();try{const tc=P.tc||{tests:[]},u=acct,now=P.tcU||Date.now(),cur={};(tc.tests||[]).forEach(t=>cur[t.id]=JSON.stringify(t));const w=[];Object.keys(cur).forEach(id=>{if(lastTests[id]!==cur[id])w.push(col.doc(tdk(u,id)).set({j:cur[id]}))});Object.keys(lastTests).forEach(id=>{if(!(id in cur))w.push(col.doc(tdk(u,id)).delete())});await Promise.all(w);const meta=Object.assign({},tc);delete meta.tests;await col.doc('tcm_'+u).set({u:now,ids:JSON.stringify(Object.keys(cur)),meta:JSON.stringify(meta)});lastTests=cur;setSync('ok')}catch(e){syncErr(e)}}
 const save=()=>{
   P.u=Date.now();
   persistLocal();
@@ -329,7 +352,7 @@ $('v-set').innerHTML=ph('Planner Setup','Targets, countdowns, routines, backlog,
 <div class="card"><h3>Daily routine</h3><div class="frm c2"><input class="inp" id="rt-t" data-enter="rt-b" placeholder="e.g. Newspaper, answer writing" maxlength="80"><button class="btn pri" id="rt-b" data-act="rtadd">Add</button></div><div class="row" id="rt-d">${DOW.map((x,i)=>`<label class="hint"><input type="checkbox" value="${i}" checked style="accent-color:#0A0A0A"> ${x}</label>`).join(' ')}</div>${P.rt.map(r=>`<div class="li"><span class="tx">${esc(r.t)}</span><span class="row">${DOW.map((x,i)=>`<button class="tiny ${r.days.includes(i)?'on':''}" style="${r.days.includes(i)?'background:#0A0A0A;color:#fff;border-color:#0A0A0A':''}" data-act="rtd" data-id="${r.id}" data-i="${i}">${x}</button>`).join('')}<button class="tiny" data-act="rtdel" data-id="${r.id}">Remove</button></span></div>`).join('')||'<div class="hint">Routine items are added to a day only when you press "Generate routine" in the Calendar.</div>'}</div>
 <div class="card"><h3>Backlog</h3><div class="frm"><input class="inp" id="bl-t" data-enter="bl-b" placeholder="e.g. Polity lecture 12" maxlength="140"><select class="inp" id="bl-p"><option value="must">Must</option><option value="should" selected>Should</option><option value="bonus">Bonus</option></select><button class="btn pri" id="bl-b" data-act="bladd">Add</button></div>${P.bl.map(x=>`<div class="li"><span class="pm ${x.p}">${PRL[x.p]}</span><span class="tx">${esc(x.t)}</span><button class="tiny" data-act="blmove" data-id="${x.id}">Move to ${sel===today()?'today':shortD(sel)}</button><button class="tiny" data-act="bldel" data-id="${x.id}">Remove</button></div>`).join('')||'<div class="hint">Your backlog is empty.</div>'}</div>
 <div class="card"><div class="row" style="justify-content:space-between"><h3>Tests and PYQ scores</h3>${ts2.length?`<span class="chip ok">Average ${avg}%</span>`:''}</div><div class="frm c4"><input class="inp" id="ts-n" placeholder="Test or PYQ set" maxlength="60"><input class="inp" id="ts-s" type="number" placeholder="Score"><input class="inp" id="ts-x" type="number" placeholder="Out of" value="100"><button class="btn pri" data-act="tsadd">Add</button></div>${ts2.slice().reverse().map(x=>`<div class="li"><span class="tx"><b>${esc(x.n)}</b> <small>${shortD(x.d)}</small></span><b>${x.s}/${x.x} · ${Math.round(x.s/x.x*100)}%</b><button class="tiny" data-act="tsdel" data-id="${x.id}">Remove</button></div>`).join('')}</div>
-<div class="card"><h3>Local profile</h3><div class="hint">This independent edition saves on this device only. It does not use Google Login, Firebase, or cloud sync. Use the full JSON backup to transfer your tracker to another device.</div><span class="chip">Local-first · offline capable</span></div>
+<div class="card"><h3>Local profile</h3><div class="hint">Offline accounts save on this device only and are never synced. Google accounts sync to your own Google account through Firebase. Use the full JSON backup to move an offline tracker to another device.</div><span class="chip">Local-first · offline capable</span></div>
 <div class="card"><h3>Data and backup</h3><div class="hint">One file holds all supported data in this local tracker: modules and study routes, source chapters, syllabus overrides, calendar logs, revisions, tasks, notes, off days, NCERT, settings, routine, backlog, exam dates, test scores and all Test Center data (tests, answer keys, schemes, audit trail). Your Google sign-in details are never included.</div>
 <div class="grid3"><div class="kpi"><b>${bc.tests}</b><span>Tests in backup</span></div><div class="kpi"><b>${bc.studyDays}</b><span>Study days logged</span></div><div class="kpi"><b>${P.set.lastBackup?shortD(ymd(new Date(P.set.lastBackup))):'Never'}</b><span>Last backup</span></div></div>
 <div class="row"><button class="btn pri" data-act="exp">Export full backup</button><button class="btn" data-act="imp">Import backup</button>${store('get','upsc_undo_'+acct)?`<button class="btn" data-act="undoimp">Undo last import</button>`:''}<button class="btn dng" data-act="reset">Reset all progress</button></div></div>
@@ -415,40 +438,30 @@ function showAuth(m){
   modal('auth-modal',true);
 }
 function unsubAll(){unsubs.forEach(f=>{try{f()}catch(e){}});unsubs=[]}
-async function loadAccount(u){bkHide();acct=u;lastTests={};unsubAll();let loc=null;try{loc=JSON.parse(store('get',pkey(u)))}catch(e){}P=norm(loc);loadPd(u);updateMe();render();sendTc();tab('ov');if(col)return await pullAccount(u);setSync('local');return false}
+async function loadAccount(u){bkHide();acct=u;lastTests={};okMain=okTc=okPd=null;unsubAll();let loc=null;try{loc=JSON.parse(store('get',pkey(u)))}catch(e){}P=norm(loc);loadPd(u);updateMe();render();sendTc();tab('ov');if(col)return await pullAccount(u);setSync('local');return false}
 function adoptMain(c){const tc=P.tc,tu=P.tcU;P=norm(c);P.tc=tc;P.tcU=tu;persistLocal();render()}
 async function pullTests(u,d){const ids=JSON.parse(d.ids||'[]'),tests=[];lastTests={};for(let i=0;i<ids.length;i+=15){const docs=await Promise.all(ids.slice(i,i+15).map(id=>col.doc(tdk(u,id)).get()));docs.forEach(x=>{if(x.exists){const t=JSON.parse(x.data().j);tests.push(t);lastTests[t.id]=x.data().j}})}P.tc=Object.assign({},JSON.parse(d.meta||'{}'),{tests:tests});P.tcU=d.u;persistLocal()}
 async function pullAccount(u){if(!col||acct!==u)return false;setSync('sav');try{
-const pm=await col.doc('p_'+u).get();if(acct!==u||!col)return false;if(pm.exists){const c=JSON.parse(pm.data().p);if((c.u||0)>(P.u||0))adoptMain(c);else if((c.u||0)<(P.u||0))pushMain()}else if(hasData(P))pushMain();
+const pm=await col.doc('p_'+u).get();if(acct!==u||!col)return false;if(pm.exists){const c=JSON.parse(pm.data().p);okMain=u;if((c.u||0)>(P.u||0))adoptMain(c);else if((c.u||0)<(P.u||0)){if(!hasData(P)&&!(P.ts&&P.ts.length)&&hasData(norm(c)))adoptMain(c);else pushMain()}}else{okMain=u;if(hasData(P))pushMain()}
 const tm=await col.doc('tcm_'+u).get();if(acct!==u||!col)return false;
-if(tm.exists){const d=tm.data();if((d.u||0)>(P.tcU||0))await pullTests(u,d);else if((d.u||0)<(P.tcU||0)){lastTests={};JSON.parse(d.ids||'[]').forEach(id=>lastTests[id]='');pushTc()}else{lastTests={};((P.tc&&P.tc.tests)||[]).forEach(t=>lastTests[t.id]=JSON.stringify(t))}}
-else if(P.tc&&P.tc.tests&&P.tc.tests.length){lastTests={};pushTc()}
-await pullPd(u);if(acct===u){render();sendTc();subscribe(u);setSync('ok')}console.log('FIRESTORE READ SUCCESS: users/'+u+'/data');return true}catch(e){console.error('FIRESTORE READ ERROR:',e&&e.code,e&&e.message);if(acct===u)setSync('err');return false}}
+if(tm.exists){const d=tm.data();if((d.u||0)>(P.tcU||0)){await pullTests(u,d);okTc=u}else if((d.u||0)<(P.tcU||0)){lastTests={};JSON.parse(d.ids||'[]').forEach(id=>lastTests[id]='');okTc=u;pushTc()}else{lastTests={};((P.tc&&P.tc.tests)||[]).forEach(t=>lastTests[t.id]=JSON.stringify(t));okTc=u}}
+else{okTc=u;if(P.tc&&P.tc.tests&&P.tc.tests.length){lastTests={};pushTc()}}
+const pdFail=(await pullPd(u))===false;if(acct===u){render();sendTc();subscribe(u);setSync(pdFail?'err':'ok');if(pdFail)retryPull()}console.log('FIRESTORE READ SUCCESS: users/'+u+'/data');return true}catch(e){console.error('FIRESTORE READ ERROR:',e&&e.code,e&&e.message);if(acct===u){syncErr(e);retryPull()}return false}}
 function subscribe(u){unsubAll();try{pdWatch(u);unsubs.push(col.doc('p_'+u).onSnapshot(s=>{if(!s.exists||(s.metadata&&s.metadata.hasPendingWrites))return;try{const c=JSON.parse(s.data().p);if(acct===u&&(c.u||0)>(P.u||0))adoptMain(c)}catch(e){}},()=>{}));
 unsubs.push(col.doc('tcm_'+u).onSnapshot(async s=>{if(!s.exists||(s.metadata&&s.metadata.hasPendingWrites))return;const d=s.data();if(acct===u&&(d.u||0)>(P.tcU||0)){await pullTests(u,d);render();sendTc()}},()=>{}))}catch(e){}}
 /* One-time, non-destructive import of progress from the old username/password system.
    Runs only after a successful cloud read. Never deletes legacy keys. Never overwrites an account that already has data. */
 async function migrateLegacy(u){
   const mk='upsc_migrated_google_'+u;
-  if(store('get',mk)||acct!==u)return;
+  if(store('get',mk)||acct!==u||!col||okMain!==u||okTc!==u)return;
   try{
-    const cands=[],add=(src,p)=>{try{if(p&&p.t&&p.m){const n=norm(p);if(hasData(n))cands.push({src:src,p:n})}}catch(e){}};
-    const names=new Set(Object.keys((ACC&&ACC.users)||{}));
-    try{for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.indexOf('upsc_p_')===0)names.add(k.slice(7))}}catch(e){}
-    names.forEach(n=>{if(!/^[a-z0-9_]{3,20}$/.test(n)||n===u)return;try{add('upsc_p_'+n,JSON.parse(store('get','upsc_p_'+n)||'null'))}catch(e){}});
-    try{add('upsc_oneshot_v1',JSON.parse(store('get','upsc_oneshot_v1')||'null'))}catch(e){}
-    let tcl=null;try{tcl=JSON.parse(store('get','upsc_ti_v1')||'null')}catch(e){}
-    const hasTcl=tcl&&tcl.tests&&tcl.tests.length;
-    if(!cands.length&&!hasTcl){store('set',mk,'1');return}
-    if(hasData(P)){console.log('LEGACY MIGRATION SKIPPED: this Google account already has data; legacy data left untouched on this device.');store('set',mk,'1');return}
-    cands.sort((a,b)=>(b.p.u||0)-(a.p.u||0));
-    const best=cands[0];
-    if(best)P=norm(best.p);
-    if(!(P.tc&&P.tc.tests&&P.tc.tests.length)&&hasTcl)P.tc=tcl;
-    P.tcU=Date.now();save();pushTcSoon();render();sendTc();
-    store('set',mk,'1');
-    console.log('LEGACY MIGRATION APPLIED from',best?best.src:'upsc_ti_v1','(legacy keys kept)');
-    toast('Your earlier progress was moved into this Google account');
+    if(hasData(P))return;
+    if((await col.doc('p_'+u).get()).exists||(await col.doc('tcm_'+u).get()).exists)return;   /* cloud already has data: never overwrite it */
+    let main=null,tcl=null;
+    try{const x=JSON.parse(store('get','upsc_oneshot_v1')||'null');if(x&&x.t&&x.m){const n=norm(x);if(hasData(n))main=n}}catch(e){}
+    try{const x=JSON.parse(store('get','upsc_ti_v1')||'null');if(x&&x.tests&&x.tests.length)tcl=x}catch(e){}
+    store('set',mk,'1');if(!main&&!tcl)return;
+    ask('Import earlier progress?','Progress from an earlier version of this tracker was found on this device. Import it into this Google account? Your cloud data is empty, so nothing is overwritten. The original device data is kept.','Import',()=>{if(acct!==u||!col||hasData(P))return;if(main)P=main;if(tcl)P.tc=tcl;P.tcU=Date.now();save();pushTcSoon();render();sendTc();toast('Earlier progress imported')});
   }catch(e){console.error('LEGACY MIGRATION ERROR:',e)}
 }
 /* Sign out only asks Firebase to sign out. Locking the UI and clearing in-memory state is done by the single onAuthStateChanged listener. */
@@ -506,8 +519,90 @@ $('imp-replace').onclick=()=>applyImport('replace');$('imp-merge').onclick=()=>{
 $('btn-out').onclick=()=>signOut();
 document.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.matches&&e.target.matches('[role=button]')){e.preventDefault();e.target.click()}});
 /* ================= Firebase + Google auth: single source of truth ================= */
-let authSeq=0,authSeen=false;
-const authErr=()=>{};
+let authSeq=0,authSeen=false,googleIntent=false;
+const authErr=m=>{const b=$('google-login-error');if(b)b.textContent=m||''};
+/* Remembered login: which kind of account is signed in on this browser, until Sign out. Offline and Google never mix. */
+const LOGIN_SESS_K='upsc_login_session_v1';
+function getSess(){try{const x=JSON.parse(store('get',LOGIN_SESS_K)||'null');return x&&(x.type==='offline'||x.type==='google')?x:null}catch(e){return null}}
+const setSess=o=>store('set',LOGIN_SESS_K,JSON.stringify(o)),clearSess=()=>store('set',LOGIN_SESS_K,'');
+function showChoice(restoring){const b=$('auth-box');b.classList.add('choosing');$('choice-btns').style.display=restoring?'none':'grid';$('choice-restoring').style.display=restoring?'block':'none';document.body.classList.add('locked');modal('auth-modal',true)}
+function firebaseInit(){if(!firebase.apps.length)firebase.initializeApp(window.UPSC_FIREBASE_CONFIG);return firebase.app()}
+const firebaseReady=()=>typeof firebase!=='undefined'&&!!window.UPSC_FIREBASE_CONFIG;
+
+/* The ONLY auth listener for Google accounts. An active offline session is never touched by it. */
+async function onAuth(user){
+  authSeen=true;const my=++authSeq,s=getSess();
+  if(user){
+    if(s&&s.type==='offline')return;
+    if(!googleIntent&&!(s&&s.type==='google'&&s.uid===user.uid)){showChoice();return}
+    googleIntent=false;
+    console.log('GOOGLE USER:',user.email);console.log('FIREBASE UID:',user.uid);
+    if(acct===user.uid&&col){document.body.classList.remove('locked');modal('auth-modal',false);return}
+    try{
+      OFFLINE=false;acct=user.uid;name=user.email||user.displayName||user.uid;
+      col=firebase.firestore().collection('users').doc(user.uid).collection('data');
+      setSess({type:'google',uid:user.uid});authErr('');
+      setTimeout(()=>window.__armIdle&&window.__armIdle(),0);
+      const loading=loadAccount(user.uid);
+      document.body.classList.remove('locked');modal('auth-modal',false);updateMe();
+      const ok=await loading;
+      if(ok&&my===authSeq&&acct===user.uid)await migrateLegacy(user.uid);
+    }catch(e){console.error('FIREBASE CLOUD INIT ERROR:',e);setSync('err')}
+  }else{
+    if(!(s&&s.type==='google'))return;
+    console.log('NO GOOGLE USER');
+    clearSess();clearTimeout(pushT);clearTimeout(tcT);unsubAll();
+    col=null;acct=null;name='';P=DEF();PD=PDEF();lastTests={};
+    bkHide();updateMe();render();sendTc();tab('ov');setSync('local');
+    showChoice();
+  }
+}
+function googleLoginInit(){
+  const btn=$('google-login-btn');
+  btn.addEventListener('click',async()=>{
+    authErr('');
+    if(!firebaseReady()){authErr('Google sign-in is unavailable: the Firebase scripts or firebase-config.js did not load. Offline login still works.');return}
+    btn.disabled=true;
+    try{
+      const cu=firebase.auth().currentUser,s=getSess();
+      if(cu&&s&&s.type==='google'&&s.uid===cu.uid){await onAuth(cu);return}   /* screen was only locked; Google session is still valid */
+      googleIntent=true;
+      const provider=new firebase.auth.GoogleAuthProvider();
+      provider.setCustomParameters({prompt:'select_account'});
+      const r=await firebase.auth().signInWithPopup(provider);
+      if(r&&r.user)await onAuth(r.user);   /* listener does not fire again when the same user signs in again */
+    }catch(e){
+      googleIntent=false;
+      console.error('GOOGLE LOGIN ERROR:',e&&e.code,e&&e.message);
+      const c=e&&e.code;
+      authErr(c==='auth/popup-closed-by-user'||c==='auth/cancelled-popup-request'?'':
+        c==='auth/popup-blocked'?'The sign-in popup was blocked. Allow popups for this site and try again.':
+        c==='auth/unauthorized-domain'?'This site is not an authorised domain in Firebase Authentication settings.':
+        c==='auth/network-request-failed'?'Network error. Check your connection and try again.':
+        'Sign-in failed ('+(c||'unknown error')+'). Please try again.');
+    }finally{btn.disabled=false}
+  });
+}
+function startAuth(){
+  googleLoginInit();
+  const s=getSess();
+  if(!firebaseReady()){if(s&&s.type==='google'){showChoice();authErr('Could not restore your Google session: Firebase did not load. Check your connection and firebase-config.js.')}return}
+  try{
+    firebaseInit();
+    firebase.auth().onAuthStateChanged(onAuth,e=>{console.error('FIREBASE AUTH LISTENER ERROR:',e);if(s&&s.type==='google')showChoice()});
+    setTimeout(()=>{if(!authSeen&&s&&s.type==='google'&&!acct){showChoice();authErr('Could not restore your Google session. Continue with Google to sign in again.')}},8000);
+  }catch(e){console.error('FIREBASE CLOUD INIT ERROR:',e);setSync('err');if(s&&s.type==='google')showChoice();authErr('Could not start Google sign-in. Check your connection and reload the page.')}
+}
+/* Console diagnostic: window.testFirestore() */
+window.testFirestore=async function(){
+  const u=firebase.auth().currentUser;
+  if(!u)return console.error('FIRESTORE TEST: no Google user is signed in');
+  try{
+    const r=firebase.firestore().collection('users').doc(u.uid).collection('data').doc('connection_test');
+    await r.set({email:u.email,timestamp:firebase.firestore.FieldValue.serverTimestamp()});console.log('FIRESTORE WRITE SUCCESS');
+    console.log('FIRESTORE READ SUCCESS:',(await r.get()).data());
+  }catch(e){console.error('FIRESTORE ERROR:',e.code,e.message)}
+};
 
 /* ================= Personal Diary: native tab, own data path (pd_<uid>), never touches P ================= */
 const PDEF=()=>({u:0,tasks:[],ev:[]}),PD_K=u=>'upsc_pd_'+u,PEV=['Birthday','Appointment','Occasion','Other'],PREC=[['none','One time'],['weekly','Weekly'],['monthly','Monthly'],['yearly','Yearly']];
@@ -517,8 +612,8 @@ function pdNorm(o){const r=Object.assign(PDEF(),o||{});r.tasks=(Array.isArray(r.
 function loadPd(u){let l=null;try{l=JSON.parse(store('get',PD_K(u)))}catch(e){}PD=pdNorm(l)}
 function pdSave(){PD.u=Date.now();if(acct)store('set',PD_K(acct),JSON.stringify(PD));pdPushSoon()}
 function pdPushSoon(){if(!col||!acct)return;setSync('sav');clearTimeout(pdT);pdT=setTimeout(pdPush,700)}
-async function pdPush(){if(!col||!acct)return;try{const j=JSON.stringify(PD);if(j.length>240000){setSync('big');return}await col.doc('pd_'+acct).set({p:j,u:PD.u});setSync('ok')}catch(e){setSync('err')}}
-async function pullPd(u){try{const s=await col.doc('pd_'+u).get();if(acct!==u)return;if(s.exists){const c=JSON.parse(s.data().p);if((c.u||0)>(PD.u||0)){PD=pdNorm(c);store('set',PD_K(u),JSON.stringify(PD))}else if((c.u||0)<(PD.u||0))pdPush()}else if(PD.tasks.length||PD.ev.length)pdPush()}catch(e){console.error('PERSONAL DIARY PULL ERROR:',e)}}
+async function pdPush(){if(!col||!acct)return;if(okPd!==acct)return retryPull();try{const j=JSON.stringify(PD);if(j.length>240000){setSync('big');return}await col.doc('pd_'+acct).set({p:j,u:PD.u});setSync('ok')}catch(e){syncErr(e)}}
+async function pullPd(u){try{const s=await col.doc('pd_'+u).get();if(acct!==u)return;okPd=u;if(s.exists){const c=JSON.parse(s.data().p);if((c.u||0)>(PD.u||0)){PD=pdNorm(c);store('set',PD_K(u),JSON.stringify(PD))}else if((c.u||0)<(PD.u||0))pdPush()}else if(PD.tasks.length||PD.ev.length)pdPush();return true}catch(e){console.error('PERSONAL DIARY PULL ERROR:',e);return false}}
 function pdWatch(u){unsubs.push(col.doc('pd_'+u).onSnapshot(s=>{if(!s.exists||(s.metadata&&s.metadata.hasPendingWrites))return;try{const c=JSON.parse(s.data().p);if(acct===u&&(c.u||0)>(PD.u||0)){PD=pdNorm(c);store('set',PD_K(u),JSON.stringify(PD));renderPd()}}catch(e){}},()=>{}))}
 function pdOcc(e,d){if(d<e.d||e.skip.includes(d))return false;if(e.rec==='none')return d===e.d;const a=parse(e.d),b=parse(d);if(e.rec==='weekly')return Math.round((b-a)/864e5)%7===0;const dim=new Date(b.getFullYear(),b.getMonth()+1,0).getDate();if(e.rec==='monthly')return b.getDate()===Math.min(a.getDate(),dim);if(e.rec==='yearly')return b.getMonth()===a.getMonth()&&b.getDate()===Math.min(a.getDate(),dim);return false}
 function pdDay(d){const tk=PD.tasks.filter(x=>x.d===d),done=tk.filter(x=>x.done).length,ev=PD.ev.filter(e=>pdOcc(e,d)).map(e=>Object.assign({},e,e.ov[d]||{},{id:e.id})).sort((a,b)=>(a.tm||'99').localeCompare(b.tm||'99'));let c='';if(tk.length)c=done===tk.length?'F':done>0?'P':(d<today()?'M':'N');return{tk,done,ev,c}}
@@ -733,7 +828,7 @@ $('local-q').onchange=()=>{$('local-qc').style.display=($('local-q').value===QOW
 const PBKDF2_ITER=310000,hex=u=>[...new Uint8Array(u)].map(b=>b.toString(16).padStart(2,'0')).join('');
 async function legacyHash(password,salt){const d=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(salt+'|'+password));return hex(d)}
 async function localPasswordHash(password,salt,iter){if(!window.crypto||!crypto.subtle)throw new Error('Secure password hashing is unavailable in this browser. Open the file in an up-to-date browser.');const k=await crypto.subtle.importKey('raw',new TextEncoder().encode(password),'PBKDF2',false,['deriveBits']);const sb=new Uint8Array(salt.match(/../g).map(x=>parseInt(x,16)));return hex(await crypto.subtle.deriveBits({name:'PBKDF2',hash:'SHA-256',salt:sb,iterations:iter||PBKDF2_ITER},k,256))}
-function localUnlock(username){setTimeout(()=>window.__armIdle&&window.__armIdle(),0);acct=username;name=username;col=null;lastTests={};clearTimeout(pushT);clearTimeout(tcT);unsubAll();loadAccount(username);document.body.classList.remove('locked');modal('auth-modal',false);setSync('local');updateMe();toast('Signed in · saved on this device')}
+function localUnlock(username,silent){OFFLINE=true;setSess({type:'offline',user:username});setTimeout(()=>window.__armIdle&&window.__armIdle(),0);acct=username;name=username;col=null;lastTests={};clearTimeout(pushT);clearTimeout(tcT);unsubAll();loadAccount(username);document.body.classList.remove('locked');modal('auth-modal',false);setSync('local');updateMe();if(!silent)toast('Signed in · saved on this device')}
 $('local-auth-toggle').addEventListener('click',()=>localAuthModeSet(localAuthMode==='login'?'create':'login'));
 $('local-auth-form').addEventListener('submit',async e=>{e.preventDefault();const username=$('local-username').value.trim().toLowerCase(),password=$('local-password').value,accounts=localAccounts(),m=localAuthMode,lockMsg=()=>'Too many attempts. Try again in '+Math.ceil((lLock-Date.now())/1000)+' seconds.',bad=()=>{if(++lFails>=5){lFails=0;lLock=Date.now()+30000}};localAuthMessage('');$('local-auth-submit').disabled=true;try{
  if(!(window.crypto&&crypto.subtle))throw new Error('Secure password hashing is unavailable in this browser. Open the file in an up-to-date browser.');
@@ -770,7 +865,7 @@ $('local-auth-form').addEventListener('submit',async e=>{e.preventDefault();cons
  }catch(err){localAuthMessage(err&&err.message||'Could not sign in. Try again.')}finally{$('local-auth-submit').disabled=false}});
 
 /* Account settings (Planner Setup): change password, security question, delete account. */
-function renderAccountSettings(){const host=$('v-set');if(!host||$('account-settings')||!acct)return;const a=localAccounts()[acct]||{},card=document.createElement('div');card.className='card';card.id='account-settings';
+function renderAccountSettings(){const host=$('v-set');if(!host||$('account-settings')||!acct||(getSess()||{}).type==='google')return;const a=localAccounts()[acct]||{},card=document.createElement('div');card.className='card';card.id='account-settings';
 card.innerHTML=`<h3>Account</h3><div class="hint">Signed in as <b>${esc(acct)}</b>. Everything you track belongs to this account only, on this device.</div><div class="frm c3"><input class="inp" id="pw-o" type="password" placeholder="Current password" autocomplete="current-password"><input class="inp" id="pw-n" type="password" placeholder="New password (8+ characters)" autocomplete="new-password"><button class="btn" id="pw-chg" type="button">Change password</button></div>
 <h3 style="margin-top:6px">Security question</h3><div class="hint">${a.q?'Current question: <b>'+esc(a.q)+'</b>. Saving a new one replaces it.':'Not set yet. Add one so you can reset your password if you forget it.'} Enter your current password above to save.</div><div class="page" style="gap:8px"><select class="inp" id="sq-q">${qopts()}</select><input class="inp" id="sq-qc" placeholder="Your own question" style="display:none" maxlength="120"><input class="inp" id="sq-a" placeholder="Answer" autocomplete="off" maxlength="80"><div><button class="btn" id="sq-save" type="button">Save security question</button></div></div>
 <div class="row"><button class="btn dng" id="acct-del" type="button">Delete account (enter your current password above)</button></div>`;host.appendChild(card);
@@ -781,10 +876,27 @@ $('pw-chg').onclick=async()=>{const accs=await verify();if(!accs)return;const n=
 $('sq-save').onclick=async()=>{const accs=await verify();if(!accs)return;const q=val('sq-q')===QOWN?val('sq-qc').trim():val('sq-q'),ans=nrmA(val('sq-a'));if(q.length<8)return toast('Security question must be at least 8 characters');if(ans.length<2)return toast('Enter an answer');const qs=newSalt();accs[acct]=Object.assign({},accs[acct],{q,qs,qh:await localPasswordHash(ans,qs,PBKDF2_ITER)});if(saveLocalAccounts(accs)!==true)return toast('Could not save. Check browser storage.');toast('Security question saved');const c=$('account-settings');if(c)c.remove();renderAccountSettings()};
 $('acct-del').onclick=async()=>{const accs=await verify();if(!accs)return;const u=acct;ask('Delete account '+u+'?','This permanently erases this account and all its progress, tests and diary from this device. Export a backup first if you may want it back.','Delete account',()=>{try{const x=localAccounts();delete x[u];saveLocalAccounts(x);localStorage.removeItem(pkey(u));localStorage.removeItem(PD_K(u))}catch(e){}acct=null;P=DEF();PD=PDEF();$('btn-out').onclick();toast('Account deleted')})};}
 $('btn-out').onclick=()=>{try{persistLocal();if(PD&&acct)store('set',PD_K(acct),JSON.stringify(PD))}catch(e){}clearTimeout(pushT);clearTimeout(tcT);unsubAll();col=null;acct=null;name='';P=DEF();PD=PDEF();lastTests={};bkHide();updateMe();render();sendTc();tab('ov');document.body.classList.add('locked');modal('auth-modal',true);$('local-password').value='';localAuthModeSet('login');setSync('local')};
-// Start locked. No automatic account selection and no external authentication.
-document.body.classList.add('locked');modal('auth-modal',true);localAuthModeSet('login');setSync('local');
+/* Explicit Sign out: forgets the remembered login (and signs out of Firebase for Google accounts). */
+const lockOutUI=$('btn-out').onclick;
+$('btn-out').onclick=async()=>{
+  const wasGoogle=(getSess()||{}).type==='google';
+  if(wasGoogle){bkHide();try{await flush()}catch(e){console.error('FLUSH BEFORE SIGN-OUT FAILED:',e)}}
+  clearSess();
+  if(wasGoogle){try{await firebase.auth().signOut()}catch(e){console.error('SIGN OUT ERROR:',e)}}
+  lockOutUI();showChoice();
+};
+/* Idle lock only locks the screen; the remembered login stays until Sign out. */
+function lockScreen(){const g=(getSess()||{}).type==='google'&&col;(g?flush():Promise.resolve()).catch(()=>{}).then(()=>{lockOutUI();showChoice()})}
+$('login-offline-btn').onclick=()=>{$('auth-box').classList.remove('choosing');localAuthModeSet('login');const u=$('local-username');if(u)u.focus()};
+$('login-back').onclick=()=>{localAuthMessage('');showChoice()};
+/* Start locked, then restore the remembered login (offline here; Google through Firebase's own persisted session). */
+document.body.classList.add('locked');localAuthModeSet('login');setSync('local');
+(function(){const s=getSess();
+  if(s&&s.type==='offline'&&localAccounts()[s.user])localUnlock(s.user,true);
+  else{if(s&&s.type==='offline')clearSess();showChoice(!!(s&&s.type==='google'))}
+  startAuth()})();
 (function(){let t;const mins=()=>{const v=parseInt(store('get','upsc_idle_min'),10);return isNaN(v)?15:v};
-const arm=()=>{clearTimeout(t);const m=mins();if(m>0&&acct)t=setTimeout(()=>{if(acct){$('btn-out').onclick();toast('Locked after '+m+' minutes of inactivity. Sign in to continue.')}},m*60000)};
+const arm=()=>{clearTimeout(t);const m=mins();if(m>0&&acct)t=setTimeout(()=>{if(acct){lockScreen();toast('Locked after '+m+' minutes of inactivity. Sign in to continue.')}},m*60000)};
 ['keydown','pointerdown','touchstart','scroll'].forEach(e=>addEventListener(e,arm,{passive:true}));window.__armIdle=arm;setInterval(()=>{if(!acct)clearTimeout(t)},5000)})();
 /* Standalone local edition: no production service worker registration. */
 </script>
