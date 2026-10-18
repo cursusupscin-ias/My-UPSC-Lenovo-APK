@@ -1,9 +1,14 @@
-
 plugins {
     id 'com.android.application'
 }
 
-def googleWebClientId = System.getenv("GOOGLE_WEB_CLIENT_ID") ?: ""
+def googleWebClientId = (System.getenv("GOOGLE_WEB_CLIENT_ID") ?: "")
+        .trim()
+        .replaceAll("[\\r\\n]", "")
+
+def escapedGoogleWebClientId = googleWebClientId
+        .replace("\\", "\\\\")
+        .replace("\"", "\\\"")
 
 android {
     namespace 'com.kp.upscprofessional'
@@ -17,7 +22,7 @@ android {
         versionName '1.0'
 
         buildConfigField "String", "GOOGLE_WEB_CLIENT_ID",
-                "\"${googleWebClientId}\""
+                "\"${escapedGoogleWebClientId}\""
     }
 
     buildFeatures {
