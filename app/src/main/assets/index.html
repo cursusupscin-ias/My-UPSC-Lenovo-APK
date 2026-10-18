@@ -557,32 +557,124 @@ async function onAuth(user){
     showChoice();
   }
 }
-function googleLoginInit(){
-  const btn=$('google-login-btn');
-  btn.addEventListener('click',async()=>{
+
+function googleLoginInit() {
+  const btn = $('google-login-btn');
+
+  // Called by MainActivity after native Google Sign-In succeeds.
+  window.__nativeGoogleSignInSuccess = async function (idToken) {
+    try {
+      if (!firebaseReady()) {
+        throw new Error('Firebase is not ready.');
+      }
+
+      if (!idToken) {
+        throw new Error('Google did not return an ID token.');
+      }
+
+      const credential =
+        firebase.auth.GoogleAuthProvider.credential(idToken);
+
+      const result = await firebase.auth().signInWithCredential(credential);
+
+      if (result && result.user) {
+        await onAuth(result.user);
+      }
+    } catch (e) {
+      googleIntent = false;
+      console.error('NATIVE GOOGLE LOGIN ERROR:', e && e.code, e && e.message);
+
+      const c = e && e.code;
+      authErr(
+        c === 'auth/network-request-failed'
+          ? 'Network error. Check your connection and try again.'
+          : c === 'auth/invalid-credential'
+          ? 'Google sign-in credentials were rejected. Please try again.'
+          : 'Google sign-in failed (' + (c || 'unknown error') + '). Please try again.'
+      );
+    } finally {
+      btn.disabled = false;
+    }
+  };
+
+  // Called by MainActivity if native Google Sign-In fails or is cancelled.
+  window.__nativeGoogleSignInError = function (message) {
+    googleIntent = false;
+    authErr(message || 'Google Sign-In could not be completed.');
+    btn.disabled = false;
+  };
+
+  btn.addEventListener('click', async () => {
     authErr('');
-    if(!firebaseReady()){authErr('Google sign-in is unavailable: the Firebase scripts or firebase-config.js did not load. Offline login still works.');return}
-    btn.disabled=true;
-    try{
-      const cu=firebase.auth().currentUser,s=getSess();
-      if(cu&&s&&s.type==='google'&&s.uid===cu.uid){await onAuth(cu);return}   /* screen was only locked; Google session is still valid */
-      googleIntent=true;
-      const provider=new firebase.auth.GoogleAuthProvider();
-      provider.setCustomParameters({prompt:'select_account'});
-      const r=await firebase.auth().signInWithPopup(provider);
-      if(r&&r.user)await onAuth(r.user);   /* listener does not fire again when the same user signs in again */
-    }catch(e){
-      googleIntent=false;
-      console.error('GOOGLE LOGIN ERROR:',e&&e.code,e&&e.message);
-      const c=e&&e.code;
-      authErr(c==='auth/popup-closed-by-user'||c==='auth/cancelled-popup-request'?'':
-        c==='auth/popup-blocked'?'The sign-in popup was blocked. Allow popups for this site and try again.':
-        c==='auth/unauthorized-domain'?'This site is not an authorised domain in Firebase Authentication settings.':
-        c==='auth/network-request-failed'?'Network error. Check your connection and try again.':
-        'Sign-in failed ('+(c||'unknown error')+'). Please try again.');
-    }finally{btn.disabled=false}
+
+    if (!firebaseReady()) {
+      authErr(
+        'Google sign-in is unavailable: the Firebase scripts or firebase-config.js did not load. Offline login still works.'
+      );
+      return;
+    }
+
+    btn.disabled = true;
+
+    try {
+      const cu = firebase.auth().currentUser;
+      const s = getSess();
+
+      if (cu && s && s.type === 'google' && s.uid === cu.uid) {
+        await onAuth(cu);
+        return;
+      }
+
+      googleIntent = true;
+
+      // Android APK: open the native Google account chooser.
+      if (
+        window.AndroidGoogleAuth &&
+        typeof window.AndroidGoogleAuth.signIn === 'function'
+      ) {
+        window.AndroidGoogleAuth.signIn();
+        return;
+      }
+
+      // Ordinary website: preserve the existing Firebase popup flow.
+      const provider = new firebase.auth.GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: 'select_account' });
+
+      const r = await firebase.auth().signInWithPopup(provider);
+
+      if (r && r.user) {
+        await onAuth(r.user);
+      }
+    } catch (e) {
+      googleIntent = false;
+      console.error('GOOGLE LOGIN ERROR:', e && e.code, e && e.message);
+
+      const c = e && e.code;
+
+      authErr(
+        c === 'auth/popup-closed-by-user' ||
+        c === 'auth/cancelled-popup-request'
+          ? ''
+          : c === 'auth/popup-blocked'
+          ? 'The sign-in popup was blocked. Allow popups for this site and try again.'
+          : c === 'auth/unauthorized-domain'
+          ? 'This site is not an authorised domain in Firebase Authentication settings.'
+          : c === 'auth/network-request-failed'
+          ? 'Network error. Check your connection and try again.'
+          : 'Sign-in failed (' + (c || 'unknown error') + '). Please try again.'
+      );
+    } finally {
+      // Keep the button disabled while the native chooser is open.
+      if (
+        !window.AndroidGoogleAuth ||
+        typeof window.AndroidGoogleAuth.signIn !== 'function'
+      ) {
+        btn.disabled = false;
+      }
+    }
   });
 }
+
 function startAuth(){
   googleLoginInit();
   const s=getSess();
